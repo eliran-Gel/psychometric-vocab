@@ -7047,6 +7047,14 @@ function resetWordProgress(word) {
   setProgress(p);
   renderKnownPartial();
 }
+function promoteWordToKnownWell(word) {
+  const kw = getKnownWell();
+  if (!kw.includes(word)) { kw.push(word); setKnownWell(kw); }
+  applyFilter();
+  renderKnownPartial();
+  renderKnownWell();
+  document.getElementById('known-well-count').textContent = '(' + getKnownWell().length + ')';
+}
 
 // Known-well helpers (English)
 function getEngKnownWell() { return getData('eng_known_well', []); }
@@ -7070,6 +7078,14 @@ function resetEngWordProgress(word) {
   delete p[word];
   setData('eng_progress', p);
   renderEngKnownPartial();
+}
+function promoteEngWordToKnownWell(word) {
+  const kw = getEngKnownWell();
+  if (!kw.includes(word)) { kw.push(word); setEngKnownWell(kw); }
+  applyEngFilter();
+  renderEngKnownPartial();
+  renderEngKnownWell();
+  document.getElementById('eng-known-well-count').textContent = '(' + getEngKnownWell().length + ')';
 }
 
 // Word progress: { [word]: { correct: n, wrong: n, lastSeen: ts, interval: days, nextReview: ts } }
@@ -9198,7 +9214,10 @@ function renderKnownPartial() {
   container.innerHTML = partialWords.map(w =>
     '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
     '<div><div class="review-word">' + w.word + '</div><div class="review-def">' + fixParens(w.definition) + '</div></div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button class="btn btn-small btn-success" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="promoteWordToKnownWell(this.dataset.word)">🌟 יודע טוב</button>' +
     '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="resetWordProgress(this.dataset.word)">↩ אפס</button>' +
+    '</div>' +
     '</div>'
   ).join('');
 }
@@ -9252,7 +9271,10 @@ function renderEngKnownPartial() {
     '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
     '<div><div class="review-word" style="direction:ltr;text-align:left;">' + w.word + '</div>' +
     '<div class="review-def" style="direction:ltr;text-align:left;">' + w.def + ' — ' + w.heb + '</div></div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button class="btn btn-small btn-success" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="promoteEngWordToKnownWell(this.dataset.word)">🌟 Know Well</button>' +
     '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="resetEngWordProgress(this.dataset.word)">↩ Reset</button>' +
+    '</div>' +
     '</div>'
   ).join('');
 }
