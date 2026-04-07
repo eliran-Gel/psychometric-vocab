@@ -7767,22 +7767,27 @@ function startEngSentences() {
   showEngSentence();
 }
 
+let engSentCurrent = null;
+let engSentOpts = [];
+
 function showEngSentence() {
   if (engSentenceIndex >= ENGLISH_SENTENCES.length) {
     engSentenceIndex = 0;
   }
-  
+
   let q = ENGLISH_SENTENCES[engSentenceIndex];
+  engSentCurrent = q;
   let correct = q.answer || q.correct;
   let opts = q.options ? shuffle([...q.options]) : shuffle([correct, ...(q.wrong || [])]);
-  
+  engSentOpts = opts;
+
   document.getElementById('eng-sent-sentence').innerHTML = q.sentence;
   document.getElementById('eng-sent-score').textContent = `Score: ${engSentScore}/${engSentTotal}`;
-  
-  optionsHTML = opts.map(opt => 
+
+  optionsHTML = opts.map(opt =>
     `<button class="quiz-option" onclick="selectEngSentOption('${opt.replace(/'/g, "\\'")}', '${correct.replace(/'/g, "\\'")}')">${opt}</button>`
   ).join('');
-  
+
   document.getElementById('eng-sent-options').innerHTML = optionsHTML;
   document.getElementById('eng-sent-feedback').style.display = 'none';
   document.getElementById('eng-sent-next').style.display = 'none';
@@ -7804,11 +7809,28 @@ function selectEngSentOption(selected, correct) {
     }
   });
   
+  // Full sentence with correct word filled in
+  let filledSentence = engSentCurrent ? engSentCurrent.sentence.replace('______', `<strong style="color:var(--success)">${correct}</strong>`) : '';
+
+  // Definitions of all options from ENGLISH_VOCAB
+  let defsHtml = '<div style="text-align:left;font-size:0.88em;line-height:1.9;margin-top:10px;opacity:0.95;">';
+  engSentOpts.forEach(opt => {
+    const vocabEntry = ENGLISH_VOCAB.find(w => w.word.toLowerCase() === opt.toLowerCase());
+    const isCorrectOpt = opt === correct;
+    defsHtml += `<div style="margin-bottom:4px;">` +
+      `<span style="color:${isCorrectOpt ? 'var(--success)' : 'var(--error)'};font-weight:700;">${opt}</span>` +
+      (vocabEntry ? ` — ${vocabEntry.def}` : '') +
+      `</div>`;
+  });
+  defsHtml += '</div>';
+
   feedback = document.getElementById('eng-sent-feedback');
   feedback.style.display = 'block';
   feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
-  feedback.innerHTML = isCorrect ? '✅ Correct!' : `❌ Wrong. Correct answer: ${correct}`;
-  
+  feedback.innerHTML = (isCorrect ? '✅ Correct!' : `❌ Wrong. Correct answer: <strong>${correct}</strong>`) +
+    (filledSentence ? `<br><div style="margin-top:8px;font-style:italic;opacity:0.9;">${filledSentence}</div>` : '') +
+    defsHtml;
+
   document.getElementById('eng-sent-next').style.display = 'block';
   
   playSound(isCorrect ? 'correct' : 'incorrect');
