@@ -76,7 +76,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
 .flashcard-container { perspective:1000px; margin:20px auto; max-width:500px; }
 .flashcard { width:100%; min-height:250px; position:relative; cursor:pointer; transition:transform 0.6s; transform-style:preserve-3d; }
 .flashcard.flipped { transform:rotateY(180deg); }
-.flashcard-face { position:absolute; inset:0; backface-visibility:hidden; border-radius:20px; padding:28px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid var(--border); box-shadow:0 8px 40px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05); }
+.flashcard-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:20px; padding:28px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid var(--border); box-shadow:0 8px 40px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05); }
 .flashcard-back { transform:rotateY(180deg); text-align:center; }
 .flashcard-word { font-size:2.4em; font-weight:900; background:linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:8px; }
 .flashcard-def { font-size:1.2em; line-height:1.6; margin-bottom:12px; }
@@ -213,6 +213,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
   <div class="header-right">
     <span id="userDisplay"></span>
     <span id="guestBadge" style="display:none;font-size:0.78em;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;opacity:0.7;">👤 אורח</span>
+    <button class="btn btn-small btn-secondary" id="logoutBtn" onclick="logoutApp()" style="display:none;" title="יציאה">🚪 יציאה</button>
     <span id="spacedRepetitionCount" style="font-size:0.8em;opacity:0.7;margin-right:8px;"></span>
     <button class="btn btn-small btn-secondary" id="backToSelectionBtn" onclick="backToLanguageSelection()" style="display:none;" title="חזרה למסך הבחירה">🔙</button>
     <button class="btn btn-small btn-primary" id="soundToggle" onclick="toggleSound()">🔊</button>
@@ -7065,8 +7066,24 @@ function enterGuestMode() {
   showApp();
 }
 
+function logoutApp() {
+  isGuestMode = false;
+  document.getElementById('guestBadge').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('backToSelectionBtn').style.display = 'none';
+  document.getElementById('headerProgress').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('englishApp').style.display = 'none';
+  document.getElementById('mathApp').style.display = 'none';
+  document.getElementById('strategyApp').style.display = 'none';
+  document.getElementById('languageSelect').style.display = 'none';
+  document.getElementById('welcome').style.display = 'flex';
+  localStorage.removeItem('pv_lastLanguage');
+}
+
 function showApp() {
   document.getElementById('welcome').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'inline-block';
   
   // Check if user has a preferred language stored
   let lastLanguage = localStorage.getItem('pv_lastLanguage');
@@ -9481,7 +9498,7 @@ function nextAnalogy() {
   optDiv.innerHTML = '';
   let labels = ['(1)', '(2)', '(3)', '(4)'];
   allOptions.forEach((pair, i) => {
-    btn = document.createElement('button');
+    const btn = document.createElement('button');
     btn.className = 'analogy-option';
     btn.innerHTML = '<span style="opacity:0.5;font-size:0.85em">' + labels[i] + '</span> <strong>' + pair.c + ' : ' + pair.d + '</strong>';
     btn.dataset.c = pair.c;
