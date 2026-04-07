@@ -209,7 +209,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
 </head>
 <body>
 <div class="header">
-  <h1>📚 עושר לשוני</h1>
+  <h1><span style="-webkit-text-fill-color:initial;background:none;background-clip:unset;">📚</span> עושר לשוני</h1>
   <div class="header-right">
     <span id="userDisplay"></span>
     <span id="guestBadge" style="display:none;font-size:0.78em;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;opacity:0.7;">👤 אורח</span>
@@ -8841,8 +8841,16 @@ function answerFillBlank(selected, btn, optDiv) {
   fb = document.getElementById('fill-feedback');
   fb.style.display = 'block';
   fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
-  fb.innerHTML = (correct ? '✅ נכון!' : '❌ לא נכון') + '<br><strong>' + fillCurrent.word + '</strong>: ' + fixParens(fillCurrent.definition);
-  
+  let fillDefsHtml = '<br><br><div style="text-align:right;font-size:0.88em;line-height:1.8;opacity:0.9;">';
+  options.forEach(o => {
+    const isCorrect = o.word === fillCurrent.word;
+    fillDefsHtml += '<div style="margin-bottom:4px;">' +
+      '<span style="color:' + (isCorrect ? 'var(--success)' : 'var(--error)') + ';font-weight:700;">' + o.word + '</span>' +
+      ' — ' + fixParens(o.definition) + '</div>';
+  });
+  fillDefsHtml += '</div>';
+  fb.innerHTML = (correct ? '✅ נכון!' : '❌ לא נכון') + '<br><strong>' + fillCurrent.word + '</strong>: ' + fixParens(fillCurrent.definition) + fillDefsHtml;
+
   document.getElementById('fill-next').style.display = 'block';
   
   // Track progress
@@ -9726,8 +9734,22 @@ function answerAnalogy(correct, btn, optDiv, correctPair) {
   fb = document.getElementById('analogy-feedback');
   fb.style.display = 'block';
   fb.className = 'analogy-feedback ' + (correct ? 'correct' : 'wrong');
+  let analogyDefsHtml = '<div style="margin-top:10px;text-align:right;font-size:0.88em;line-height:1.8;opacity:0.9;">';
+  optDiv.querySelectorAll('.analogy-option').forEach(b => {
+    const isCorrectOpt = b.dataset.isCorrect === '1';
+    const wc = VOCAB.find(w => w.word === b.dataset.c);
+    const wd = VOCAB.find(w => w.word === b.dataset.d);
+    analogyDefsHtml += '<div style="margin-bottom:6px;padding:6px 10px;border-radius:8px;background:' + (isCorrectOpt ? 'rgba(0,184,148,0.08)' : 'rgba(255,118,117,0.06)') + ';">' +
+      '<span style="color:' + (isCorrectOpt ? 'var(--success)' : 'var(--error)') + ';font-weight:700;">' + b.dataset.c + ' : ' + b.dataset.d + '</span><br>' +
+      (wc ? '<span style="opacity:0.8;">' + b.dataset.c + '</span> — ' + fixParens(wc.definition) + '<br>' : '') +
+      (wd ? '<span style="opacity:0.8;">' + b.dataset.d + '</span> — ' + fixParens(wd.definition) : '') +
+      '</div>';
+  });
+  analogyDefsHtml += '</div>';
+
   fb.innerHTML = (correct ? '✅ נכון!' : '❌ התשובה הנכונה: ' + analogyCurrent.c + ' : ' + analogyCurrent.d) +
-    (analogyCurrent.explanation ? '<br><div style="margin-top:10px;padding:10px;background:var(--glass);border-radius:10px;font-size:0.9em;opacity:0.9;text-align:right;line-height:1.6;">💡 ' + analogyCurrent.explanation + '</div>' : '');
+    (analogyCurrent.explanation ? '<br><div style="margin-top:10px;padding:10px;background:var(--glass);border-radius:10px;font-size:0.9em;opacity:0.9;text-align:right;line-height:1.6;">💡 ' + analogyCurrent.explanation + '</div>' : '') +
+    analogyDefsHtml;
 
   document.getElementById('analogy-next').style.display = 'block';
 
