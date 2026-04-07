@@ -8688,7 +8688,7 @@ function renderKnownWell() {
   container.innerHTML = words.map(w =>
     '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
     '<div><div class="review-word">' + w.word + '</div><div class="review-def">' + fixParens(w.definition) + '</div></div>' +
-    '<button class="btn btn-small btn-secondary" onclick="unmarkKnownWell('' + w.word.replace(/'/g,"\'") + '')">↩ החזר לתרגול</button>' +
+    '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="unmarkKnownWell(this.dataset.word)">↩ החזר לתרגול</button>' +
     '</div>'
   ).join('');
 }
@@ -8741,7 +8741,7 @@ function renderEngKnownWell() {
     '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
     '<div><div class="review-word" style="direction:ltr;text-align:right;">' + w.word + '</div>' +
     '<div class="review-def" style="direction:ltr;text-align:right;">' + w.def + ' — ' + w.heb + '</div></div>' +
-    '<button class="btn btn-small btn-secondary" onclick="unmarkEngKnownWell('' + w.word.replace(/'/g,"\'") + '')">↩ Back to practice</button>' +
+    '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="unmarkEngKnownWell(this.dataset.word)">↩ Back to practice</button>' +
     '</div>'
   ).join('');
 }
