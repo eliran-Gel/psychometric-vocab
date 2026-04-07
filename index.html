@@ -7793,47 +7793,60 @@ function showEngSentence() {
   document.getElementById('eng-sent-next').style.display = 'none';
 }
 
-function selectEngSentOption(selected, correct) {
+async function translateEng(text) {
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|he`);
+    const data = await res.json();
+    const t = data.responseData && data.responseData.translatedText;
+    return (t && t !== 'NO QUERY SPECIFIED') ? t : null;
+  } catch(e) { return null; }
+}
+
+async function selectEngSentOption(selected, correct) {
   isCorrect = selected === correct;
   engSentTotal++;
   if (isCorrect) engSentScore++;
-  
-  // Show feedback
+
+  // Disable buttons
   buttons = document.querySelectorAll('#eng-sent-options .quiz-option');
   buttons.forEach(btn => {
     btn.disabled = true;
-    if (btn.textContent === correct) {
-      btn.classList.add('correct');
-    } else if (btn.textContent === selected && !isCorrect) {
-      btn.classList.add('wrong');
-    }
+    if (btn.textContent === correct) btn.classList.add('correct');
+    else if (btn.textContent === selected && !isCorrect) btn.classList.add('wrong');
   });
-  
-  // Full sentence with correct word filled in
-  let filledSentence = engSentCurrent ? engSentCurrent.sentence.replace('______', `<strong style="color:var(--success)">${correct}</strong>`) : '';
-
-  // Definitions of all options from ENGLISH_VOCAB
-  let defsHtml = '<div style="text-align:left;font-size:0.88em;line-height:1.9;margin-top:10px;opacity:0.95;">';
-  engSentOpts.forEach(opt => {
-    const vocabEntry = ENGLISH_VOCAB.find(w => w.word.toLowerCase() === opt.toLowerCase());
-    const isCorrectOpt = opt === correct;
-    defsHtml += `<div style="margin-bottom:4px;">` +
-      `<span style="color:${isCorrectOpt ? 'var(--success)' : 'var(--error)'};font-weight:700;">${opt}</span>` +
-      (vocabEntry ? ` — ${vocabEntry.def}` : '') +
-      `</div>`;
-  });
-  defsHtml += '</div>';
 
   feedback = document.getElementById('eng-sent-feedback');
   feedback.style.display = 'block';
   feedback.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
-  feedback.innerHTML = (isCorrect ? '✅ Correct!' : `❌ Wrong. Correct answer: <strong>${correct}</strong>`) +
-    (filledSentence ? `<br><div style="margin-top:8px;font-style:italic;opacity:0.9;">${filledSentence}</div>` : '') +
-    defsHtml;
+  feedback.innerHTML = (isCorrect ? '✅ נכון!' : `❌ לא נכון. התשובה הנכונה: <strong>${correct}</strong>`) +
+    `<br><div style="margin-top:8px;opacity:0.7;font-size:0.85em;">⏳ מתרגם...</div>`;
 
   document.getElementById('eng-sent-next').style.display = 'block';
-  
   playSound(isCorrect ? 'correct' : 'incorrect');
+
+  // Translate sentence + all options in parallel
+  const filledSentenceEng = engSentCurrent ? engSentCurrent.sentence.replace('______', correct) : '';
+  const [sentHeb, ...optHebs] = await Promise.all([
+    translateEng(filledSentenceEng),
+    ...engSentOpts.map(opt => {
+      const vocabEntry = ENGLISH_VOCAB.find(w => w.word.toLowerCase() === opt.toLowerCase());
+      return vocabEntry ? Promise.resolve(vocabEntry.def) : translateEng(opt);
+    })
+  ]);
+
+  let defsHtml = '<div style="text-align:right;font-size:0.9em;line-height:2;margin-top:10px;direction:rtl;">';
+  engSentOpts.forEach((opt, i) => {
+    const isCorrectOpt = opt === correct;
+    defsHtml += `<div style="margin-bottom:4px;">` +
+      `<span style="color:${isCorrectOpt ? 'var(--success)' : 'var(--error)'};font-weight:700;">${opt}</span>` +
+      (optHebs[i] ? ` — ${optHebs[i]}` : '') +
+      `</div>`;
+  });
+  defsHtml += '</div>';
+
+  feedback.innerHTML = (isCorrect ? '✅ נכון!' : `❌ לא נכון. התשובה הנכונה: <strong>${correct}</strong>`) +
+    (sentHeb ? `<br><div style="margin-top:8px;font-size:0.95em;direction:rtl;text-align:right;line-height:1.7;">${sentHeb}</div>` : '') +
+    defsHtml;
 }
 
 function nextEngSentence() {
