@@ -190,6 +190,9 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
   border-color: var(--accent);
 }
 
+.unit-btn-heb, .unit-btn-eng { min-width:36px; font-size:0.78em !important; padding:4px 8px !important; border-radius:8px !important; }
+.filters { flex-wrap:wrap; gap:6px; }
+
 @media(max-width:600px) {
   .header h1 { font-size:1em; }
   .container { padding:12px; }
@@ -297,9 +300,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
 
     <div class="filters" id="filtersBar">
       <label>יחידה:</label>
-      <select id="unitFilter" onchange="applyFilter()">
-        <option value="all">הכל</option>
-      </select>
+      <div id="unitFilter" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;"></div>
       <label>מיון:</label>
       <select id="sortFilter" onchange="applyFilter()">
         <option value="spaced">חזרה מרווחת</option>
@@ -695,9 +696,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
     
     <div class="filters" id="englishFiltersBar">
       <label>Unit:</label>
-      <select id="engUnitFilter" onchange="applyEngFilter()">
-        <option value="all">All Units</option>
-      </select>
+      <div id="engUnitFilter" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;"></div>
       <label>Sort:</label>
       <select id="engSortFilter" onchange="applyEngFilter()">
         <option value="spaced">Spaced Repetition</option>
@@ -7042,6 +7041,12 @@ function unmarkKnownWell(word) {
   applyFilter();
   renderKnownWell();
 }
+function resetWordProgress(word) {
+  const p = getProgress();
+  delete p[word];
+  setProgress(p);
+  renderKnownPartial();
+}
 
 // Known-well helpers (English)
 function getEngKnownWell() { return getData('eng_known_well', []); }
@@ -7059,6 +7064,12 @@ function unmarkEngKnownWell(word) {
   setEngKnownWell(getEngKnownWell().filter(w => w !== word));
   applyEngFilter();
   renderEngKnownWell();
+}
+function resetEngWordProgress(word) {
+  const p = JSON.parse(localStorage.getItem(sKey('eng_progress')) || '{}');
+  delete p[word];
+  setData('eng_progress', p);
+  renderEngKnownPartial();
 }
 
 // Word progress: { [word]: { correct: n, wrong: n, lastSeen: ts, interval: days, nextReview: ts } }
@@ -7155,10 +7166,12 @@ function logoutApp() {
   document.getElementById('strategyApp').style.display = 'none';
   document.getElementById('languageSelect').style.display = 'none';
   document.getElementById('welcome').style.display = 'flex';
+  localStorage.removeItem('pv_autoLogin');
   localStorage.removeItem('pv_lastLanguage');
 }
 
 function showApp() {
+  if (!isGuestMode) localStorage.setItem('pv_autoLogin', '1');
   document.getElementById('welcome').style.display = 'none';
   document.getElementById('logoutBtn').style.display = 'inline-block';
   
@@ -7235,16 +7248,31 @@ function backToLanguageSelection() {
 function initHebrewApp() {
   // Populate unit filter
   let units = [...new Set(VOCAB.map(w => w.unit))].sort((a,b) => a-b);
-  let sel = document.getElementById('unitFilter');
-  sel.innerHTML = '<option value="all">הכל (' + VOCAB.length + ')</option>';
+  const unitContainer = document.getElementById('unitFilter');
+  unitContainer.innerHTML = '';
+  const allBtnHeb = document.createElement('button');
+  allBtnHeb.className = 'btn btn-small btn-primary unit-btn-heb active';
+  allBtnHeb.dataset.unit = 'all';
+  allBtnHeb.textContent = 'הכל';
+  allBtnHeb.onclick = () => toggleUnitFilter(allBtnHeb);
+  unitContainer.appendChild(allBtnHeb);
   units.forEach(u => {
-    count = VOCAB.filter(w => w.unit === u).length;
-    sel.innerHTML += '<option value="' + u + '">יחידה ' + u + ' (' + count + ')</option>';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-small btn-secondary unit-btn-heb';
+    btn.dataset.unit = u;
+    btn.textContent = u;
+    btn.onclick = () => toggleUnitFilter(btn);
+    unitContainer.appendChild(btn);
   });
-  
-  // Restore last unit
-  let lastUnit = localStorage.getItem('pv_lastUnit');
-  if (lastUnit) sel.value = lastUnit;
+  // Restore last units
+  const lastUnits = JSON.parse(localStorage.getItem('pv_lastUnits') || 'null');
+  if (lastUnits && lastUnits.length) {
+    allBtnHeb.className = 'btn btn-small btn-secondary unit-btn-heb';
+    lastUnits.forEach(u => {
+      const b = document.querySelector('.unit-btn-heb[data-unit="' + u + '"]');
+      if (b) b.className = 'btn btn-small btn-primary unit-btn-heb active';
+    });
+  }
   
   applyFilter();
   setMode('flashcards');
@@ -7260,16 +7288,31 @@ function initEnglishApp() {
   
   // Populate unit filter for English
   let engUnits = [...new Set(ENGLISH_VOCAB.map(w => w.unit))].sort((a,b) => a-b);
-  sel = document.getElementById('engUnitFilter');
-  sel.innerHTML = '<option value="all">All Units (' + ENGLISH_VOCAB.length + ')</option>';
+  const engUnitContainer = document.getElementById('engUnitFilter');
+  engUnitContainer.innerHTML = '';
+  const allBtnEng = document.createElement('button');
+  allBtnEng.className = 'btn btn-small btn-primary unit-btn-eng active';
+  allBtnEng.dataset.unit = 'all';
+  allBtnEng.textContent = 'All';
+  allBtnEng.onclick = () => toggleEngUnitFilter(allBtnEng);
+  engUnitContainer.appendChild(allBtnEng);
   engUnits.forEach(u => {
-    count = ENGLISH_VOCAB.filter(w => w.unit === u).length;
-    sel.innerHTML += '<option value="' + u + '">Unit ' + u + ' (' + count + ')</option>';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-small btn-secondary unit-btn-eng';
+    btn.dataset.unit = u;
+    btn.textContent = u;
+    btn.onclick = () => toggleEngUnitFilter(btn);
+    engUnitContainer.appendChild(btn);
   });
-  
-  // Restore last English unit
-  let lastEngUnit = localStorage.getItem(username + '_lastEngUnit');
-  if (lastEngUnit) sel.value = lastEngUnit;
+  // Restore last English units
+  const lastEngUnits = JSON.parse(localStorage.getItem('pv_lastEngUnits') || 'null');
+  if (lastEngUnits && lastEngUnits.length) {
+    allBtnEng.className = 'btn btn-small btn-secondary unit-btn-eng';
+    lastEngUnits.forEach(u => {
+      const b = document.querySelector('.unit-btn-eng[data-unit="' + u + '"]');
+      if (b) b.className = 'btn btn-small btn-primary unit-btn-eng active';
+    });
+  }
   
   applyEngFilter();
   setEngMode('flashcards');
@@ -7290,15 +7333,64 @@ function updateHeaderProgress() {
   fill.style.width = pct + '%';
 }
 
+function getSelectedHebUnits() {
+  const selected = [];
+  document.querySelectorAll('.unit-btn-heb.active').forEach(b => {
+    if (b.dataset.unit !== 'all') selected.push(parseInt(b.dataset.unit));
+  });
+  return selected;
+}
+
+function toggleUnitFilter(btn) {
+  const unit = btn.dataset.unit;
+  if (unit === 'all') {
+    document.querySelectorAll('.unit-btn-heb').forEach(b => { b.className = 'btn btn-small btn-secondary unit-btn-heb'; });
+    btn.className = 'btn btn-small btn-primary unit-btn-heb active';
+  } else {
+    document.querySelector('.unit-btn-heb[data-unit="all"]').className = 'btn btn-small btn-secondary unit-btn-heb';
+    btn.className = btn.classList.contains('active')
+      ? 'btn btn-small btn-secondary unit-btn-heb'
+      : 'btn btn-small btn-primary unit-btn-heb active';
+    if (!document.querySelector('.unit-btn-heb.active')) {
+      document.querySelector('.unit-btn-heb[data-unit="all"]').className = 'btn btn-small btn-primary unit-btn-heb active';
+    }
+  }
+  applyFilter();
+}
+
+function getSelectedEngUnits() {
+  const selected = [];
+  document.querySelectorAll('.unit-btn-eng.active').forEach(b => {
+    if (b.dataset.unit !== 'all') selected.push(parseInt(b.dataset.unit));
+  });
+  return selected;
+}
+
+function toggleEngUnitFilter(btn) {
+  const unit = btn.dataset.unit;
+  if (unit === 'all') {
+    document.querySelectorAll('.unit-btn-eng').forEach(b => { b.className = 'btn btn-small btn-secondary unit-btn-eng'; });
+    btn.className = 'btn btn-small btn-primary unit-btn-eng active';
+  } else {
+    document.querySelector('.unit-btn-eng[data-unit="all"]').className = 'btn btn-small btn-secondary unit-btn-eng';
+    btn.className = btn.classList.contains('active')
+      ? 'btn btn-small btn-secondary unit-btn-eng'
+      : 'btn btn-small btn-primary unit-btn-eng active';
+    if (!document.querySelector('.unit-btn-eng.active')) {
+      document.querySelector('.unit-btn-eng[data-unit="all"]').className = 'btn btn-small btn-primary unit-btn-eng active';
+    }
+  }
+  applyEngFilter();
+}
+
 function applyFilter() {
-  let unit = document.getElementById('unitFilter').value;
+  const selectedUnits = getSelectedHebUnits();
   let sort = document.getElementById('sortFilter').value;
-  
-  // Save selected unit
-  if (username) { localStorage.setItem('pv_lastUnit', unit); saveToFirestore(); }
-  
+
+  if (!isGuestMode) localStorage.setItem('pv_lastUnits', JSON.stringify(selectedUnits));
+
   const knownWell = getKnownWell();
-  filteredWords = unit === 'all' ? [...VOCAB] : VOCAB.filter(w => w.unit == unit);
+  filteredWords = selectedUnits.length === 0 ? [...VOCAB] : VOCAB.filter(w => selectedUnits.includes(w.unit));
   filteredWords = filteredWords.filter(w => !knownWell.includes(w.word));
   
   switch(sort) {
@@ -7351,13 +7443,12 @@ function setMode(mode) {
 
 // Flashcards
 function applyEngFilter() {
-  unit = document.getElementById('engUnitFilter').value;
+  const selectedEngUnits = getSelectedEngUnits();
   sort = document.getElementById('engSortFilter').value;
-  
-  // Save selected English unit
-  if (username) { localStorage.setItem(username + '_lastEngUnit', unit); saveToFirestore(); }
-  
-  filteredEngWords = unit === 'all' ? [...ENGLISH_VOCAB] : ENGLISH_VOCAB.filter(w => w.unit == unit);
+
+  if (!isGuestMode) localStorage.setItem('pv_lastEngUnits', JSON.stringify(selectedEngUnits));
+
+  filteredEngWords = selectedEngUnits.length === 0 ? [...ENGLISH_VOCAB] : ENGLISH_VOCAB.filter(w => selectedEngUnits.includes(w.unit));
   
   switch(sort) {
     case 'spaced': filteredEngWords = srSortEng(filteredEngWords); break;
@@ -9105,9 +9196,9 @@ function renderKnownPartial() {
     return;
   }
   container.innerHTML = partialWords.map(w =>
-    '<div class="review-item">' +
-    '<div class="review-word">' + w.word + '</div>' +
-    '<div class="review-def">' + fixParens(w.definition) + '</div>' +
+    '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
+    '<div><div class="review-word">' + w.word + '</div><div class="review-def">' + fixParens(w.definition) + '</div></div>' +
+    '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="resetWordProgress(this.dataset.word)">↩ אפס</button>' +
     '</div>'
   ).join('');
 }
@@ -9158,9 +9249,10 @@ function renderEngKnownPartial() {
     return;
   }
   container.innerHTML = partialWords.map(w =>
-    '<div class="review-item">' +
-    '<div class="review-word" style="direction:ltr;text-align:right;">' + w.word + '</div>' +
-    '<div class="review-def" style="direction:ltr;text-align:right;">' + w.def + ' — ' + w.heb + '</div>' +
+    '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
+    '<div><div class="review-word" style="direction:ltr;text-align:left;">' + w.word + '</div>' +
+    '<div class="review-def" style="direction:ltr;text-align:left;">' + w.def + ' — ' + w.heb + '</div></div>' +
+    '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="resetEngWordProgress(this.dataset.word)">↩ Reset</button>' +
     '</div>'
   ).join('');
 }
@@ -11003,6 +11095,11 @@ function renderFrac(text) {
 
 // Initialize sound toggle on page load
 document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+
+// Auto-login: if user previously chose "התחל ללמוד", skip welcome screen
+if (localStorage.getItem('pv_autoLogin') === '1') {
+  showApp();
+}
 </script>
 </body>
 </html>
