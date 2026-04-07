@@ -7349,6 +7349,18 @@ function updateHeaderProgress() {
   fill.style.width = pct + '%';
 }
 
+function scrollToNextBtn(btnId) {
+  setTimeout(() => {
+    const el = document.getElementById(btnId);
+    if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'});
+  }, 80);
+}
+function scrollToQuestionTop(containerId) {
+  const el = document.getElementById(containerId);
+  if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+  else window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
 function getSelectedHebUnits() {
   const selected = [];
   document.querySelectorAll('.unit-btn-heb.active').forEach(b => {
@@ -7856,12 +7868,14 @@ function selectEngQuizOption(selected, correct) {
     '❌ Wrong. Correct answer: ' + correct + '<br><small>' + filteredEngWords[engQuizIndex].heb + '</small>';
   
   document.getElementById('eng-quiz-next').style.display = 'block';
-  
+  scrollToNextBtn('eng-quiz-next');
+
   // Play sound
   playSound(isCorrect ? 'correct' : 'incorrect');
 }
 
 function nextEngQuiz() {
+  scrollToQuestionTop('mode-english');
   engQuizIndex++;
   showEngQuiz();
 }
@@ -8295,6 +8309,7 @@ async function selectEngSentOption(selected, correct) {
     `<br><div style="margin-top:8px;opacity:0.7;font-size:0.85em;">⏳ מתרגם...</div>`;
 
   document.getElementById('eng-sent-next').style.display = 'block';
+  scrollToNextBtn('eng-sent-next');
   playSound(isCorrect ? 'correct' : 'incorrect');
 
   // Translate full sentence via API; look up individual words from static dictionary
@@ -8320,6 +8335,7 @@ async function selectEngSentOption(selected, correct) {
 }
 
 function nextEngSentence() {
+  scrollToQuestionTop('mode-english');
   engSentenceIndex++;
   showEngSentence();
 }
@@ -8528,6 +8544,7 @@ function startQuiz() {
 }
 
 function nextQuiz() {
+  scrollToQuestionTop('mode-quiz');
   if (filteredWords.length < 4) return;
   
   let idx = Math.floor(Math.random() * filteredWords.length);
@@ -8590,6 +8607,7 @@ function answerQuiz(selected, btn, optDiv) {
   }
   
   document.getElementById('quiz-next').style.display = 'block';
+  scrollToNextBtn('quiz-next');
 }
 
 // Review mistakes
@@ -9286,6 +9304,7 @@ function startFillBlank() {
 }
 
 function nextFillBlank() {
+  scrollToQuestionTop('mode-fillBlank');
   // Get words with examples
   let wordsWithExamples = filteredWords.filter(w => w.example && w.example.trim());
   if (!wordsWithExamples.length) {
@@ -9364,7 +9383,8 @@ function answerFillBlank(selected, btn, optDiv) {
   fb.innerHTML = (correct ? '✅ נכון!' : '❌ לא נכון') + '<br><strong>' + fillCurrent.word + '</strong>: ' + fixParens(fillCurrent.definition) + fillDefsHtml;
 
   document.getElementById('fill-next').style.display = 'block';
-  
+  scrollToNextBtn('fill-next');
+
   // Track progress
   if (correct) {
     updateSR(fillCurrent.word, 2);
@@ -10180,6 +10200,7 @@ function buildWrongPairs(analogy) {
 }
 
 function nextAnalogy() {
+  scrollToQuestionTop('mode-analogies');
   pool = getFilteredAnalogies();
   if (!pool.length) return;
 
@@ -10264,6 +10285,7 @@ function answerAnalogy(correct, btn, optDiv, correctPair) {
     analogyDefsHtml;
 
   document.getElementById('analogy-next').style.display = 'block';
+  scrollToNextBtn('analogy-next');
 
   // Save analogy stats
   let key = sKey('analogy_stats');
