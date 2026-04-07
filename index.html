@@ -289,6 +289,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
       <!-- English mode now handled by language selection screen -->
       <button class="btn btn-primary" data-mode="stats" onclick="setMode('stats')">📊 סטטיסטיקה</button>
       <button class="btn btn-primary" data-mode="essay" onclick="setMode('essay')">✍️ חיבור</button>
+      <button class="btn btn-primary" data-mode="known" onclick="setMode('known')">📚 מילים שלמדתי</button>
       <button class="btn btn-primary admin-hide" data-mode="admin" id="adminBtn" onclick="setMode('admin')">👑 אדמין</button>
     </div>
     
@@ -326,9 +327,10 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
           </div>
         </div>
       </div>
-      <div class="flashcard-rating" id="fc-rating" style="display:none;">
+      <div class="flashcard-rating" id="fc-rating" style="display:none;flex-wrap:wrap;gap:6px;">
         <button class="btn btn-error btn-small" onclick="rateCard(0)">❌ לא ידעתי</button>
-        <button class="btn btn-success btn-small" onclick="rateCard(2)">✅ ידעתי</button>
+        <button class="btn btn-secondary btn-small" onclick="rateCard(1)">🔶 יודע חלקית</button>
+        <button class="btn btn-success btn-small" onclick="markHebrewKnownWell()">🌟 יודע טוב</button>
       </div>
       <div class="flashcard-nav">
         <button class="btn btn-secondary" onclick="prevCard()">→ הקודם</button>
@@ -661,6 +663,20 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
       </div>
     </div>
     
+    <!-- Known Words Mode -->
+    <div id="mode-known" style="display:none;">
+      <div class="card" style="text-align:center;margin-bottom:16px;">
+        <h3>📚 מילים שלמדתי</h3>
+        <p style="opacity:0.7;font-size:0.9em;margin-top:4px;">מילים שסימנת בתרגול</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="known-tab-well" onclick="showKnownTab('well')">🌟 יודע טוב <span id="known-well-count"></span></button>
+        <button class="btn btn-secondary" id="known-tab-partial" onclick="showKnownTab('partial')">🔶 יודע חלקית <span id="known-partial-count"></span></button>
+      </div>
+      <div id="known-well-list"></div>
+      <div id="known-partial-list" style="display:none;"></div>
+    </div>
+
 
   </div>
 
@@ -673,6 +689,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
       <button class="btn btn-primary" data-mode="eng-sentences" onclick="setEngMode('sentences')">📝 Sentence Completion</button>
       <button class="btn btn-primary" data-mode="eng-match" onclick="setEngMode('match')">🔄 Word Match</button>
       <button class="btn btn-primary" data-mode="eng-srs" onclick="setEngMode('spacedRepetition')">🔄 Spaced Repetition</button>
+      <button class="btn btn-primary" data-mode="eng-known" onclick="setEngMode('known')">📚 Words I Know</button>
       <button class="btn btn-primary" data-mode="eng-stats" onclick="setEngMode('stats')">📊 Statistics</button>
     </div>
     
@@ -709,9 +726,10 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
           </div>
         </div>
       </div>
-      <div class="flashcard-rating" id="eng-fc-rating" style="display:none;">
+      <div class="flashcard-rating" id="eng-fc-rating" style="display:none;flex-wrap:wrap;gap:6px;">
         <button class="btn btn-error btn-small" onclick="rateEngCard(0)">❌ Don't know</button>
-        <button class="btn btn-success btn-small" onclick="rateEngCard(2)">✅ I know it</button>
+        <button class="btn btn-secondary btn-small" onclick="rateEngCard(1)">🔶 Partially know</button>
+        <button class="btn btn-success btn-small" onclick="markEngKnownWell()">🌟 Know it well</button>
       </div>
       <div class="flashcard-nav">
         <button class="btn btn-secondary" onclick="prevEngCard()">← Previous</button>
@@ -837,6 +855,20 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
         <button class="btn btn-primary" onclick="nextEngSpaced()">Next →</button>
       </div>
       <div class="flashcard-progress" id="eng-sp-progress"></div>
+    </div>
+
+
+    <!-- English Known Words Mode -->
+    <div id="eng-mode-known" style="display:none;">
+      <div class="card" style="text-align:center;margin-bottom:16px;">
+        <h3>📚 Words I Know</h3>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="eng-known-tab-well" onclick="showEngKnownTab('well')">🌟 Know Well <span id="eng-known-well-count"></span></button>
+        <button class="btn btn-secondary" id="eng-known-tab-partial" onclick="showEngKnownTab('partial')">🔶 Partially Know <span id="eng-known-partial-count"></span></button>
+      </div>
+      <div id="eng-known-well-list"></div>
+      <div id="eng-known-partial-list" style="display:none;"></div>
     </div>
 
     <!-- English Statistics Mode -->
@@ -6984,6 +7016,51 @@ function sKey(key) { return 'pv_' + key; }
 function getData(key, def) { try { return JSON.parse(localStorage.getItem(sKey(key))) || def; } catch { return def; } }
 function setData(key, val) { if (!isGuestMode) localStorage.setItem(sKey(key), JSON.stringify(val)); }
 
+// Fix RTL parentheses display
+function fixParens(t) {
+  if (!t) return t;
+  return t.replace(/\(/g, '‎(').replace(/\)/g, ')‎');
+}
+
+// Known-well helpers (Hebrew)
+function getKnownWell() { return getData('known_well', []); }
+function setKnownWell(arr) { setData('known_well', arr); }
+function isKnownWell(word) { return getKnownWell().includes(word); }
+function markHebrewKnownWell() {
+  const w = filteredWords[fcIndex];
+  if (!w) return;
+  const kw = getKnownWell();
+  if (!kw.includes(w.word)) { kw.push(w.word); setKnownWell(kw); }
+  removeMistake(w.word);
+  updateSR(w.word, 2);
+  playSound('correct');
+  applyFilter();
+  nextCard();
+}
+function unmarkKnownWell(word) {
+  setKnownWell(getKnownWell().filter(w => w !== word));
+  applyFilter();
+  renderKnownWell();
+}
+
+// Known-well helpers (English)
+function getEngKnownWell() { return getData('eng_known_well', []); }
+function setEngKnownWell(arr) { setData('eng_known_well', arr); }
+function markEngKnownWell() {
+  const w = engFilteredWords[engFcIndex];
+  if (!w) return;
+  const kw = getEngKnownWell();
+  if (!kw.includes(w.word)) { kw.push(w.word); setEngKnownWell(kw); }
+  playSound('correct');
+  applyEngFilter();
+  nextEngCard();
+}
+function unmarkEngKnownWell(word) {
+  setEngKnownWell(getEngKnownWell().filter(w => w !== word));
+  applyEngFilter();
+  renderEngKnownWell();
+}
+
 // Word progress: { [word]: { correct: n, wrong: n, lastSeen: ts, interval: days, nextReview: ts } }
 function getProgress() { return getData('progress', {}); }
 function setProgress(p) { setData('progress', p); }
@@ -7220,7 +7297,9 @@ function applyFilter() {
   // Save selected unit
   if (username) { localStorage.setItem('pv_lastUnit', unit); saveToFirestore(); }
   
+  const knownWell = getKnownWell();
   filteredWords = unit === 'all' ? [...VOCAB] : VOCAB.filter(w => w.unit == unit);
+  filteredWords = filteredWords.filter(w => !knownWell.includes(w.word));
   
   switch(sort) {
     case 'spaced': filteredWords = srSort(filteredWords); break;
@@ -7247,12 +7326,12 @@ function setMode(mode) {
   document.querySelectorAll('.nav .btn').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-mode="' + mode + '"]').classList.add('active');
   
-  ['flashcards','unknown','quiz','analogies','review','spacedRepetition','timedQuiz','fillBlank','english','stats','essay','admin'].forEach(m => {
+  ['flashcards','unknown','quiz','analogies','review','spacedRepetition','timedQuiz','fillBlank','english','stats','essay','admin','known'].forEach(m => {
     el = document.getElementById('mode-' + m);
     if (el) el.style.display = m === mode ? 'block' : 'none';
   });
   
-  document.getElementById('filtersBar').style.display = ['stats','timedQuiz','essay','analogies'].includes(mode) ? 'none' : 'flex';
+  document.getElementById('filtersBar').style.display = ['stats','timedQuiz','essay','analogies','known'].includes(mode) ? 'none' : 'flex';
   
   if (mode === 'flashcards') showFlashcard();
   if (mode === 'unknown') showUnknownMode();
@@ -7266,6 +7345,7 @@ function setMode(mode) {
   if (mode === 'stats') showStats();
   if (mode === 'essay') initEssayMode();
   if (mode === 'admin') loadAdminPanel();
+  if (mode === 'known') showKnownMode();
   
 }
 
@@ -7329,8 +7409,8 @@ function showFlashcard() {
   document.getElementById('fc-rating').style.display = 'none';
   document.getElementById('fc-word').textContent = w.word;
   document.getElementById('fc-word2').textContent = w.word;
-  document.getElementById('fc-def').textContent = w.definition;
-  document.getElementById('fc-example').textContent = w.example || '';
+  document.getElementById('fc-def').textContent = fixParens(w.definition);
+  document.getElementById('fc-example').textContent = fixParens(w.example || '');
   document.getElementById('fc-example').style.display = w.example ? 'block' : 'none';
   document.getElementById('fc-unit').textContent = 'יחידה ' + w.unit;
   document.getElementById('fc-unit2').textContent = 'יחידה ' + w.unit;
@@ -7383,6 +7463,7 @@ function setEngMode(mode) {
     case 'unknown': initEngUnknown(); break;
     case 'quiz': startEngQuiz(); break;
     case 'sentences': startEngSentences(); break;
+    case 'known': showEngKnownMode(); break;
     case 'match': startEngMatch(); break;
     case 'spacedRepetition': initEngSpaced(); break;
     case 'stats': showEngStats(); break;
@@ -8580,6 +8661,112 @@ function finishTimedQuiz() {
 }
 
 // ============ FILL IN THE BLANK MODE ============
+
+// ============ KNOWN WORDS MODE ============
+function showKnownMode() {
+  showKnownTab('well');
+}
+
+function showKnownTab(tab) {
+  document.getElementById('known-tab-well').className = 'btn ' + (tab === 'well' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('known-tab-partial').className = 'btn ' + (tab === 'partial' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('known-well-list').style.display = tab === 'well' ? 'block' : 'none';
+  document.getElementById('known-partial-list').style.display = tab === 'partial' ? 'block' : 'none';
+  if (tab === 'well') renderKnownWell();
+  else renderKnownPartial();
+}
+
+function renderKnownWell() {
+  const kw = getKnownWell();
+  document.getElementById('known-well-count').textContent = '(' + kw.length + ')';
+  const container = document.getElementById('known-well-list');
+  if (!kw.length) {
+    container.innerHTML = '<div class="card" style="text-align:center;opacity:0.6;">עוד לא סימנת מילים כ"יודע טוב"</div>';
+    return;
+  }
+  const words = VOCAB.filter(w => kw.includes(w.word));
+  container.innerHTML = words.map(w =>
+    '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
+    '<div><div class="review-word">' + w.word + '</div><div class="review-def">' + fixParens(w.definition) + '</div></div>' +
+    '<button class="btn btn-small btn-secondary" onclick="unmarkKnownWell('' + w.word.replace(/'/g,"\'") + '')">↩ החזר לתרגול</button>' +
+    '</div>'
+  ).join('');
+}
+
+function renderKnownPartial() {
+  const kw = getKnownWell();
+  const prog = getProgress();
+  const partialWords = VOCAB.filter(w => {
+    const p = prog[w.word];
+    return p && p.correct >= 1 && !kw.includes(w.word);
+  });
+  document.getElementById('known-partial-count').textContent = '(' + partialWords.length + ')';
+  const container = document.getElementById('known-partial-list');
+  if (!partialWords.length) {
+    container.innerHTML = '<div class="card" style="text-align:center;opacity:0.6;">עוד אין מילים שידועות חלקית</div>';
+    return;
+  }
+  container.innerHTML = partialWords.map(w =>
+    '<div class="review-item">' +
+    '<div class="review-word">' + w.word + '</div>' +
+    '<div class="review-def">' + fixParens(w.definition) + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+// ============ ENGLISH KNOWN WORDS MODE ============
+function showEngKnownMode() {
+  showEngKnownTab('well');
+}
+
+function showEngKnownTab(tab) {
+  document.getElementById('eng-known-tab-well').className = 'btn ' + (tab === 'well' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('eng-known-tab-partial').className = 'btn ' + (tab === 'partial' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('eng-known-well-list').style.display = tab === 'well' ? 'block' : 'none';
+  document.getElementById('eng-known-partial-list').style.display = tab === 'partial' ? 'block' : 'none';
+  if (tab === 'well') renderEngKnownWell();
+  else renderEngKnownPartial();
+}
+
+function renderEngKnownWell() {
+  const kw = getEngKnownWell();
+  document.getElementById('eng-known-well-count').textContent = '(' + kw.length + ')';
+  const container = document.getElementById('eng-known-well-list');
+  if (!kw.length) {
+    container.innerHTML = '<div class="card" style="text-align:center;opacity:0.6;">No words marked as "Know Well" yet</div>';
+    return;
+  }
+  const words = ENG_VOCAB.filter(w => kw.includes(w.word));
+  container.innerHTML = words.map(w =>
+    '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
+    '<div><div class="review-word" style="direction:ltr;text-align:right;">' + w.word + '</div>' +
+    '<div class="review-def" style="direction:ltr;text-align:right;">' + w.def + ' — ' + w.heb + '</div></div>' +
+    '<button class="btn btn-small btn-secondary" onclick="unmarkEngKnownWell('' + w.word.replace(/'/g,"\'") + '')">↩ Back to practice</button>' +
+    '</div>'
+  ).join('');
+}
+
+function renderEngKnownPartial() {
+  const kw = getEngKnownWell();
+  const prog = JSON.parse(localStorage.getItem(sKey('eng_progress')) || '{}');
+  const partialWords = ENG_VOCAB.filter(w => {
+    const p = prog[w.word];
+    return p && p.correct >= 1 && !kw.includes(w.word);
+  });
+  document.getElementById('eng-known-partial-count').textContent = '(' + partialWords.length + ')';
+  const container = document.getElementById('eng-known-partial-list');
+  if (!partialWords.length) {
+    container.innerHTML = '<div class="card" style="text-align:center;opacity:0.6;">No partially known words yet</div>';
+    return;
+  }
+  container.innerHTML = partialWords.map(w =>
+    '<div class="review-item">' +
+    '<div class="review-word" style="direction:ltr;text-align:right;">' + w.word + '</div>' +
+    '<div class="review-def" style="direction:ltr;text-align:right;">' + w.def + ' — ' + w.heb + '</div>' +
+    '</div>'
+  ).join('');
+}
+
 function startFillBlank() {
   fillCorrect = 0;
   fillTotal = 0;
@@ -8615,7 +8802,7 @@ function nextFillBlank() {
   optDiv = document.getElementById('fill-options');
   optDiv.innerHTML = '';
   options.forEach(o => {
-    btn = document.createElement('button');
+    const btn = document.createElement('button');
     btn.className = 'quiz-option';
     btn.textContent = o.word;
     btn.onclick = () => answerFillBlank(o, btn, optDiv);
@@ -8654,7 +8841,7 @@ function answerFillBlank(selected, btn, optDiv) {
   fb = document.getElementById('fill-feedback');
   fb.style.display = 'block';
   fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
-  fb.innerHTML = (correct ? '✅ נכון!' : '❌ לא נכון') + '<br><strong>' + fillCurrent.word + '</strong>: ' + fillCurrent.definition;
+  fb.innerHTML = (correct ? '✅ נכון!' : '❌ לא נכון') + '<br><strong>' + fillCurrent.word + '</strong>: ' + fixParens(fillCurrent.definition);
   
   document.getElementById('fill-next').style.display = 'block';
   
