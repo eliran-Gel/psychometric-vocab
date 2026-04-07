@@ -212,6 +212,7 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
   <h1>📚 עושר לשוני</h1>
   <div class="header-right">
     <span id="userDisplay"></span>
+    <span id="guestBadge" style="display:none;font-size:0.78em;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;opacity:0.7;">👤 אורח</span>
     <span id="spacedRepetitionCount" style="font-size:0.8em;opacity:0.7;margin-right:8px;"></span>
     <button class="btn btn-small btn-secondary" id="backToSelectionBtn" onclick="backToLanguageSelection()" style="display:none;" title="חזרה למסך הבחירה">🔙</button>
     <button class="btn btn-small btn-primary" id="soundToggle" onclick="toggleSound()">🔊</button>
@@ -227,13 +228,10 @@ body::before { content:''; position:fixed; inset:0; background: radial-gradient(
     <div class="welcome-emoji">📚</div>
     <h2>עושר לשוני</h2>
     <p>אוצר מילים לפסיכומטרי<br>מבוסס על הספר של אבירם פלדמן<br><strong style="color:var(--accent);">1,806 מילים · 10 יחידות</strong></p>
-    <div id="authForm" style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:320px;">
-      <input type="email" id="authEmail" placeholder="אימייל" autofocus style="padding:14px 24px;border-radius:14px;border:2px solid var(--border);background:var(--glass);backdrop-filter:blur(10px);color:var(--text);font-size:1.1em;text-align:center;width:100%;font-family:inherit;transition:border-color 0.3s;outline:none;direction:ltr;">
-      <input type="password" id="authPassword" placeholder="סיסמה" style="padding:14px 24px;border-radius:14px;border:2px solid var(--border);background:var(--glass);backdrop-filter:blur(10px);color:var(--text);font-size:1.1em;text-align:center;width:100%;font-family:inherit;transition:border-color 0.3s;outline:none;direction:ltr;">
-      <input type="password" id="authPasswordConfirm" placeholder="אימות סיסמה" style="padding:14px 24px;border-radius:14px;border:2px solid var(--border);background:var(--glass);backdrop-filter:blur(10px);color:var(--text);font-size:1.1em;text-align:center;width:100%;font-family:inherit;transition:border-color 0.3s;outline:none;direction:ltr;display:none;">
-      <div id="authError" style="color:var(--error);font-size:0.9em;text-align:center;display:none;"></div>
-      <button class="btn btn-primary" id="authSubmitBtn" onclick="handleAuth()" style="padding:14px 48px;font-size:1.15em;font-weight:700;border-radius:14px;width:100%;">התחברות</button>
-      <button class="btn btn-secondary btn-small" id="authToggleBtn" onclick="toggleAuthMode()" style="font-size:0.9em;">אין לך חשבון? הרשמה</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:20px;width:100%;max-width:280px;">
+      <button class="btn btn-primary" onclick="showApp()" style="padding:14px 0;font-size:1.15em;font-weight:700;border-radius:14px;width:100%;">🚀 התחל ללמוד</button>
+      <button class="btn btn-secondary" onclick="enterGuestMode()" style="padding:12px 0;font-size:1em;border-radius:14px;width:100%;">👤 כניסה כאורח</button>
+      <p style="font-size:0.8em;opacity:0.5;margin-top:4px;text-align:center;">אורח יכול לגלוש אך לא לשמור התקדמות</p>
     </div>
   </div>
 
@@ -6859,7 +6857,6 @@ const ENGLISH_SENTENCES = [
   {sentence:"The new software will ______ productivity across all departments.", answer:"boost", options:["reduce","boost","ignore","complicate"], unit:4}
 ];
 
-let username = '';
 let currentMode = 'flashcards';
 let filteredWords = [];
 let englishMode = false; // Track if we're in English mode
@@ -6890,8 +6887,9 @@ let fillTotal = 0;
 let fillCurrent = null;
 
 // ============ NO AUTH - localStorage only ============
-const username = 'user';
+let username = 'user';
 let currentUid = null;
+let isGuestMode = false;
 
 // ============ SOUND SYSTEM ============
 function initAudio() {
@@ -6979,14 +6977,11 @@ function updateDailyStats(type, value) {
 }
 
 function saveToFirestore() { /* localStorage only */ }
-// Auto-start app on page load
-document.addEventListener('DOMContentLoaded', () => {
-  showApp();
-});
+// App starts when user clicks a button on the welcome screen
 // Storage helpers
 function sKey(key) { return 'pv_' + key; }
 function getData(key, def) { try { return JSON.parse(localStorage.getItem(sKey(key))) || def; } catch { return def; } }
-function setData(key, val) { localStorage.setItem(sKey(key), JSON.stringify(val)); }
+function setData(key, val) { if (!isGuestMode) localStorage.setItem(sKey(key), JSON.stringify(val)); }
 
 // Word progress: { [word]: { correct: n, wrong: n, lastSeen: ts, interval: days, nextReview: ts } }
 function getProgress() { return getData('progress', {}); }
@@ -7063,6 +7058,12 @@ function shuffle(arr) {
 }
 
 // App initializes via DOMContentLoaded event
+
+function enterGuestMode() {
+  isGuestMode = true;
+  document.getElementById('guestBadge').style.display = 'inline-block';
+  showApp();
+}
 
 function showApp() {
   document.getElementById('welcome').style.display = 'none';
