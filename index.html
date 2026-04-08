@@ -7060,10 +7060,14 @@ function promoteWordToKnownWell(word) {
 function getEngKnownWell() { return getData('eng_known_well', []); }
 function setEngKnownWell(arr) { setData('eng_known_well', arr); }
 function markEngKnownWell() {
-  const w = engFilteredWords[engFcIndex];
+  const w = filteredEngWords[engFcIndex];
   if (!w) return;
   const kw = getEngKnownWell();
   if (!kw.includes(w.word)) { kw.push(w.word); setEngKnownWell(kw); }
+  // Ensure word has progress so it shows in partial if later unmarked
+  const prog = JSON.parse(localStorage.getItem(sKey('eng_progress')) || '{}');
+  if (!prog[w.word]) prog[w.word] = { correct: 1, total: 1, date: Date.now() };
+  localStorage.setItem(sKey('eng_progress'), JSON.stringify(prog));
   playSound('correct');
   applyEngFilter();
   nextEngCard();
@@ -7756,7 +7760,7 @@ function updateEngSR(word, quality) {
   // Update progress
   if (!progress[word]) progress[word] = { correct: 0, total: 0, date: Date.now() };
   progress[word].total++;
-  if (quality >= 3) progress[word].correct++;
+  if (quality >= 1) progress[word].correct++;
   progress[word].date = Date.now();
   
   localStorage.setItem(sKey('eng_progress'), JSON.stringify(progress));
@@ -9267,7 +9271,7 @@ function renderEngKnownWell() {
     '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
     '<div><div class="review-word" style="direction:ltr;text-align:right;">' + w.word + '</div>' +
     '<div class="review-def" style="direction:ltr;text-align:right;">' + w.def + ' — ' + w.heb + '</div></div>' +
-    '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="unmarkEngKnownWell(this.dataset.word)">↩ Back to practice</button>' +
+    '<button class="btn btn-small btn-secondary" data-word="' + w.word.replace(/"/g,'&quot;') + '" onclick="unmarkEngKnownWell(this.dataset.word)">↩ Move to Partial</button>' +
     '</div>'
   ).join('');
 }
