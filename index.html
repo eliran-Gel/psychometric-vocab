@@ -7481,7 +7481,8 @@ function applyEngFilter() {
   if (!isGuestMode) localStorage.setItem('pv_lastEngUnits', JSON.stringify(selectedEngUnits));
 
   filteredEngWords = selectedEngUnits.length === 0 ? [...ENGLISH_VOCAB] : ENGLISH_VOCAB.filter(w => selectedEngUnits.includes(w.unit));
-  
+  filteredEngWords = filteredEngWords.filter(w => !getEngKnownWell().includes(w.word));
+
   switch(sort) {
     case 'spaced': filteredEngWords = srSortEng(filteredEngWords); break;
     case 'random': filteredEngWords = shuffle(filteredEngWords); break;
@@ -9266,7 +9267,7 @@ function renderEngKnownWell() {
     container.innerHTML = '<div class="card" style="text-align:center;opacity:0.6;">No words marked as "Know Well" yet</div>';
     return;
   }
-  const words = ENG_VOCAB.filter(w => kw.includes(w.word));
+  const words = ENGLISH_VOCAB.filter(w => kw.includes(w.word));
   container.innerHTML = words.map(w =>
     '<div class="review-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
     '<div><div class="review-word" style="direction:ltr;text-align:right;">' + w.word + '</div>' +
@@ -9279,7 +9280,7 @@ function renderEngKnownWell() {
 function renderEngKnownPartial() {
   const kw = getEngKnownWell();
   const prog = JSON.parse(localStorage.getItem(sKey('eng_progress')) || '{}');
-  const partialWords = ENG_VOCAB.filter(w => {
+  const partialWords = ENGLISH_VOCAB.filter(w => {
     const p = prog[w.word];
     return p && p.correct >= 1 && !kw.includes(w.word);
   });
